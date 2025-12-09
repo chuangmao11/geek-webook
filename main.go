@@ -30,7 +30,9 @@ func initWebServer() *gin.Engine {
 		//AllowOrigins:     []string{"http://localhost:3000"},
 		AllowCredentials: true,
 
-		AllowHeaders: []string{"Content-Type"},
+		AllowHeaders: []string{"Content-Type", "Authorization"},
+		// 允许前端访问后端携带的jwt头部
+		ExposeHeaders: []string{"x-jwt-token"},
 		//AllowHeaders: []string{"content-type"},
 		//AllowMethods: []string{"POST"},
 		AllowOriginFunc: func(origin string) bool {
@@ -44,21 +46,7 @@ func initWebServer() *gin.Engine {
 	}), func(ctx *gin.Context) {
 		println("这是我的 Middleware")
 	})
-	login := &middleware.LoginMiddlewareBuilder{}
-	// 存储数据的，也就是你 userId 存哪里
-	// 直接存 cookie
-	//store := cookie.NewStore([]byte("secret"))
-	// 基于内存的实现
-	//store := memstore.NewStore([]byte("k6CswdUm75WKcbM68UQUuxVsHSpTCwgK"),
-	//	[]byte("eF1`yQ9>yT1`tH1,sJ0.zD8;mZ9~nC6("))
-	store, err := redis.NewStore(16, "tcp",
-		"localhost:6379", "", "",
-		[]byte("k6CswdUm75WKcbM68UQUuxVsHSpTCwgK"),
-		[]byte("k6CswdUm75WKcbM68UQUuxVsHSpTCwgA"))
-	if err != nil {
-		panic(err)
-	}
-	server.Use(sessions.Sessions("ssid", store), login.CheckLogin())
+	useJWT(server)
 	return server
 }
 
@@ -80,4 +68,27 @@ func initDB() *gorm.DB {
 		panic(err)
 	}
 	return db
+}
+
+func useJWT(server *gin.Engine) {
+	login := middleware.LoginJWTMiddlewareBuilder{}
+	server.Use(login.CheckLogin())
+}
+
+func useSession(server *gin.Engine) {
+	login := &middleware.LoginMiddlewareBuilder{}
+	// 存储数据的，也就是你 userId 存哪里
+	// 直接存 cookie
+	//store := cookie.NewStore([]byte("secret"))
+	// 基于内存的实现
+	//store := memstore.NewStore([]byte("k6CswdUm75WKcbM68UQUuxVsHSpTCwgK"),
+	//	[]byte("eF1`yQ9>yT1`tH1,sJ0.zD8;mZ9~nC6("))
+	store, err := redis.NewStore(16, "tcp",
+		"localhost:6379", "", "",
+		[]byte("k6CswdUm75WKcbM68UQUuxVsHSpTCwgK"),
+		[]byte("k6CswdUm75WKcbM68UQUuxVsHSpTCwgA"))
+	if err != nil {
+		panic(err)
+	}
+	server.Use(sessions.Sessions("ssid", store), login.CheckLogin())
 }
