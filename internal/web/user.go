@@ -1,0 +1,82 @@
+package web
+
+import (
+	"geek-webook/internal/domain"
+	"geek-webook/internal/repository"
+	"geek-webook/internal/service"
+	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-gonic/gin"
+	"net/http"
+)
+
+const (
+	emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
+	// 和上面比起来，用 ` 看起来就比较清爽
+	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+)
+
+type UserHandler struct {
+	emailRexExp    *regexp.Regexp
+	passwordRexExp *regexp.Regexp
+	svc            *service.UserService
+}
+
+func NewUserHandler(svc *service.UserService) *UserHandler {
+	return &UserHandler{
+		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
+		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
+		svc:            svc,
+	}
+}
+
+func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
+	ug := server.Group("/users")
+	ug.POST("/signup", h.SignUp)
+}
+
+func (h *UserHandler) SignUp(ctx *gin.Context) {
+	type SignupReq struct {
+		Email           string `json:"email"`
+		Password        string `json:"password"`
+		ConfirmPassword string `json:"confirmPassword"`
+	}
+	var req SignupReq
+	if err := ctx.Bind(&req); err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	isEmail, err := h.emailRexExp.MatchString(req.Email)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if !isEmail {
+		ctx.String(http.StatusOK, "邮箱格式错误")
+		return
+	}
+	if req.Password != req.ConfirmPassword {
+		ctx.String(http.StatusOK, "两次密码输入不一致")
+		return
+	}
+	isPassword, err := h.passwordRexExp.MatchString(req.Password)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if !isPassword {
+		ctx.String(http.StatusOK, "密码格式错误")
+		return
+	}
+	err = h.svc.SignUp(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	switch err {
+	case nil:
+		ctx.String(http.StatusOK, "注册成功")
+	case repository.ErrDuplicateEmail:
+		ctx.String(http.StatusOK, "邮箱冲突，请换一个邮箱")
+	default:
+		ctx.String(http.StatusOK, "系统错误")
+	}
+}
