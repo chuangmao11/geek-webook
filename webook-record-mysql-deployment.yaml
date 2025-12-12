@@ -21,6 +21,8 @@ spec:
           env:
             - name: MYSQL_ROOT_PASSWORD
               value: root
+            - name: MYSQL_OPTS
+              value: "--innodb_force_recovery=1"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3306

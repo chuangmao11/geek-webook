@@ -1,6 +1,7 @@
 package main
 
 import (
+	"geek-webook/config"
 	"geek-webook/internal/repository"
 	"geek-webook/internal/repository/dao"
 	"geek-webook/internal/service"
@@ -20,10 +21,10 @@ import (
 )
 
 func main() {
-	//server := initWebServer()
-	//db := initDB()
-	//initUserHdl(db, server)
-	server := gin.Default()
+	server := initWebServer()
+	db := initDB()
+	initUserHdl(db, server)
+	//server := gin.Default()
 	server.GET("/hello", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "hello world")
 	})
@@ -54,7 +55,7 @@ func initWebServer() *gin.Engine {
 		println("这是我的 Middleware")
 	})
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: config.Config.Redis.Addr,
 	})
 
 	server.Use(ratelimit.NewBuilder(redisClient,
@@ -72,7 +73,7 @@ func initUserHdl(db *gorm.DB, server *gin.Engine) {
 }
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13316)/webook"))
+	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN))
 	if err != nil {
 		panic(err)
 	}
