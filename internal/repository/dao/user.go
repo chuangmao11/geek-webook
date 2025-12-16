@@ -3,9 +3,10 @@ package dao
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
-	"time"
 )
 
 var ErrDuplicateEmail = errors.New("邮箱冲突")
@@ -41,6 +42,16 @@ func (dao *UserDAO) FindByEmail(ctx context.Context, email string) (User, error)
 	return u, err
 }
 
+func (dao *UserDAO) UpdateById(ctx context.Context, entity User) error {
+	return dao.db.WithContext(ctx).Model(&entity).Where("id=?", entity.Id).
+		Updates(map[string]any{
+			"utime":    entity.Utime,
+			"nickname": entity.Nickname,
+			"birthday": entity.Birthday,
+			"about_me": entity.AboutMe,
+		}).Error
+}
+
 type User struct {
 	Id       int64  `gorm:"primaryKey,autoIncrement"`
 	Email    string `gorm:"unique"`
@@ -54,4 +65,8 @@ type User struct {
 
 	// json 存储
 	//Addr string
+	Nickname string `gorm:"type=varchar(128)"`
+
+	Birthday int64
+	AboutMe  string `gorm:"type=varchar(4096)"`
 }

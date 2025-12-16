@@ -7,4 +7,8 @@ type User struct {
 	Password string
 	Ctime    time.Time
 	Id       int64
+
+	Nickname string
+	Birthday time.Time
+	AboutMe  string
 }

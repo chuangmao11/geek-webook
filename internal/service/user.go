@@ -5,6 +5,7 @@ import (
 	"errors"
 	"geek-webook/internal/domain"
 	"geek-webook/internal/repository"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,4 +45,10 @@ func (svc *UserService) Login(ctx context.Context, email, password string) (doma
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
 	return u, nil
+}
+
+func (svc *UserService) UpdateNonSensitiveInfo(ctx context.Context,
+	user domain.User) error {
+	// UpdateNicknameAndXXAnd
+	return svc.repo.UpdateNonZeroFields(ctx, user)
 }

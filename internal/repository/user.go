@@ -4,6 +4,7 @@ import (
 	"context"
 	"geek-webook/internal/domain"
 	"geek-webook/internal/repository/dao"
+	"time"
 )
 
 var ErrDuplicateEmail = dao.ErrDuplicateEmail
@@ -37,5 +38,24 @@ func (repo *UserRepository) ToDomain(u dao.User) domain.User {
 		Id:       u.Id,
 		Email:    u.Email,
 		Password: u.Password,
+		AboutMe:  u.AboutMe,
+		Nickname: u.Nickname,
+		Birthday: time.UnixMilli(u.Birthday),
 	}
+}
+
+func (repo *UserRepository) toEntity(u domain.User) dao.User {
+	return dao.User{
+		Id:       u.Id,
+		Email:    u.Email,
+		Password: u.Password,
+		Birthday: u.Birthday.UnixMilli(),
+		AboutMe:  u.AboutMe,
+		Nickname: u.Nickname,
+	}
+}
+
+func (repo *UserRepository) UpdateNonZeroFields(ctx context.Context,
+	user domain.User) error {
+	return repo.dao.UpdateById(ctx, repo.toEntity(user))
 }

@@ -4,12 +4,13 @@ import (
 	"geek-webook/internal/domain"
 	"geek-webook/internal/repository"
 	"geek-webook/internal/service"
+	"net/http"
+	"time"
+
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
-	"net/http"
-	"time"
 )
 
 const (
@@ -37,6 +38,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/signup", h.SignUp)
 	//ug.POST("/login", h.Login)
 	ug.POST("/login", h.LoginJWT)
+	ug.POST("/edit", h.Edit)
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -150,6 +152,39 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 	default:
 		ctx.String(http.StatusOK, "系统错误")
 	}
+}
+
+func (h *UserHandler) Edit(ctx *gin.Context) {
+	type Req struct {
+		NickName string `json:"nickName"`
+		Birthday string `json:"birthday"`
+		AboutMe  string `json:"aboutMe"`
+	}
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	uc, ok := ctx.MustGet("user").(UserClaims)
+	if !ok {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	birthday, err := time.Parse(time.DateOnly, req.Birthday)
+	if err != nil {
+		ctx.String(http.StatusOK, "生日格式不对")
+		return
+	}
+	err = h.svc.UpdateNonSensitiveInfo(ctx, domain.User{
+		Id:       uc.uid,
+		Nickname: req.NickName,
+		Birthday: birthday,
+		AboutMe:  req.AboutMe,
+	})
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	ctx.String(http.StatusOK, "更新成功")
 }
 
 var JWTKey = []byte("k6CstdUm75WKcbM68UQUuxVsHSpTCwgK")
