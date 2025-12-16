@@ -39,6 +39,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	//ug.POST("/login", h.Login)
 	ug.POST("/login", h.LoginJWT)
 	ug.POST("/edit", h.Edit)
+	ug.GET("/profile", h.Profile)
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -132,7 +133,7 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 	switch err {
 	case nil:
 		uc := UserClaims{
-			uid:       user.Id,
+			Uid:       user.Id,
 			UserAgent: ctx.GetHeader("User-Agent"),
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
@@ -175,7 +176,7 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 		return
 	}
 	err = h.svc.UpdateNonSensitiveInfo(ctx, domain.User{
-		Id:       uc.uid,
+		Id:       uc.Uid,
 		Nickname: req.NickName,
 		Birthday: birthday,
 		AboutMe:  req.AboutMe,
@@ -187,10 +188,40 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "更新成功")
 }
 
+func (h *UserHandler) Profile(ctx *gin.Context) {
+	//us := ctx.MustGet("user").(UserClaims)
+	//ctx.String(http.StatusOK, "这是 profile")
+	// 嵌入一段刷新过期时间的代码
+
+	uc, ok := ctx.MustGet("user").(UserClaims)
+	if !ok {
+		//ctx.String(http.StatusOK, "系统错误")
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	u, err := h.svc.FindById(ctx, uc.Uid)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	type User struct {
+		Nickname string `json:"nickname"`
+		Email    string `json:"email"`
+		AboutMe  string `json:"aboutMe"`
+		Birthday string `json:"birthday"`
+	}
+	ctx.JSON(http.StatusOK, User{
+		Nickname: u.Nickname,
+		Email:    u.Email,
+		AboutMe:  u.AboutMe,
+		Birthday: u.Birthday.Format(time.DateOnly),
+	})
+}
+
 var JWTKey = []byte("k6CstdUm75WKcbM68UQUuxVsHSpTCwgK")
 
 type UserClaims struct {
 	jwt.RegisteredClaims
-	uid       int64
+	Uid       int64
 	UserAgent string
 }

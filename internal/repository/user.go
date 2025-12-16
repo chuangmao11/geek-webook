@@ -59,3 +59,11 @@ func (repo *UserRepository) UpdateNonZeroFields(ctx context.Context,
 	user domain.User) error {
 	return repo.dao.UpdateById(ctx, repo.toEntity(user))
 }
+
+func (repo *UserRepository) FindById(ctx context.Context, uid int64) (domain.User, error) {
+	u, err := repo.dao.FindById(ctx, uid)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return repo.ToDomain(u), nil
+}
